@@ -8,7 +8,7 @@ import { normalizePotSizeCode } from "@/lib/catalog";
 export async function GET(request: Request) {
   const ip = getClientIp(request.headers);
 
-  if (isRateLimited(`products:${ip}`)) {
+  if (await isRateLimited(`products:${ip}`)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 

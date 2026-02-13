@@ -21,7 +21,7 @@ export async function PATCH(
   }
 
   const ip = getClientIp(request.headers);
-  if (isRateLimited(`admin:orders:update:${ip}:${profile.id}`)) {
+  if (await isRateLimited(`admin:orders:update:${ip}:${profile.id}`)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { AuditAction, ProductStatus } from "@prisma/client";
 import { requireAuthProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { cleanText, getClientIp, isRateLimited, isTrustedOrigin } from "@/lib/security";
+import { cleanExternalErrorBody, cleanText, getClientIp, isRateLimited, isTrustedOrigin } from "@/lib/security";
 import { writeAuditLog } from "@/lib/audit";
 
 const SHIPPING_INR = 49;
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
   }
 
   const ip = getClientIp(request.headers);
-  if (isRateLimited(`checkout:${ip}:${profile.id}`)) {
+  if (await isRateLimited(`checkout:${ip}:${profile.id}`)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
@@ -179,7 +179,7 @@ export async function POST(request: Request) {
   });
 
   if (!razorpayRes.ok) {
-    const errorBody = await razorpayRes.text();
+    const providerMessage = cleanExternalErrorBody(await razorpayRes.text());
     await prisma.order.update({
       where: { id: order.id },
       data: { status: "FAILED" },
@@ -190,7 +190,11 @@ export async function POST(request: Request) {
       actorUserId: profile.clerkUserId,
       profileId: profile.id,
       target: order.id,
-      metadata: { reason: "razorpay_order_create_failed", errorBody },
+      metadata: {
+        reason: "razorpay_order_create_failed",
+        statusCode: razorpayRes.status,
+        providerMessage: providerMessage || undefined,
+      },
       ipAddress: ip,
       userAgent: request.headers.get("user-agent"),
     });

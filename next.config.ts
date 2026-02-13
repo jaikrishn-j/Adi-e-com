@@ -1,9 +1,10 @@
 import type { NextConfig } from "next";
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const nextConfig: NextConfig = {
   images: {
-    dangerouslyAllowLocalIP:
-      process.env.NODE_ENV !== "production" || process.env.ALLOW_LOCAL_IMAGE_IP === "true",
+    dangerouslyAllowLocalIP: !isProduction,
     remotePatterns: [
       {
         protocol: "https",
@@ -17,21 +18,25 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "ik.imagekit.io",
       },
-      {
-        protocol: "http",
-        hostname: "localhost",
-        port: "9000",
-      },
-      {
-        protocol: "http",
-        hostname: "127.0.0.1",
-        port: "9000",
-      },
-      {
-        protocol: "http",
-        hostname: "minio",
-        port: "9000",
-      },
+      ...(!isProduction
+        ? [
+            {
+              protocol: "http" as const,
+              hostname: "localhost",
+              port: "9000",
+            },
+            {
+              protocol: "http" as const,
+              hostname: "127.0.0.1",
+              port: "9000",
+            },
+            {
+              protocol: "http" as const,
+              hostname: "minio",
+              port: "9000",
+            },
+          ]
+        : []),
     ],
   },
 };

@@ -29,7 +29,7 @@ cp .env.example .env
 Then edit `.env` values:
 
 ```bash
-DATABASE_URL="postgresql://leafcart:leafcart@localhost:5432/leafcart?schema=public"
+DATABASE_URL="postgresql://leafcart_user:replace_with_strong_postgres_password@localhost:5432/leafcart?schema=public"
 
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
 CLERK_SECRET_KEY="sk_test_..."
@@ -41,10 +41,10 @@ ADMIN_EMAILS="admin@example.com,owner@example.com"
 
 MINIO_ENDPOINT="http://127.0.0.1:9000"
 MINIO_REGION="us-east-1"
-MINIO_ACCESS_KEY="minioadmin"
-MINIO_SECRET_KEY="minioadmin"
+MINIO_ACCESS_KEY="replace_with_strong_minio_user"
+MINIO_SECRET_KEY="replace_with_strong_minio_password"
 MINIO_BUCKET="leafcart-media"
-MINIO_PUBLIC_URL="http://127.0.0.1:9000/leafcart-media"
+MINIO_PUBLIC_URL="https://assets.example.com/leafcart-media"
 
 APP_URL="http://localhost:3000"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"

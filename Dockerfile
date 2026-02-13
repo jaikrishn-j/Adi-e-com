@@ -4,12 +4,9 @@ WORKDIR /app
 
 RUN apk add --no-cache libc6-compat openssl
 
-ARG DATABASE_URL=postgresql://leafcart:leafcart@postgres:5432/leafcart?schema=public
-ENV DATABASE_URL=$DATABASE_URL
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build?schema=public
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_placeholder
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-ARG CLERK_SECRET_KEY=sk_test_placeholder
-ENV CLERK_SECRET_KEY=$CLERK_SECRET_KEY
 ARG ALLOW_LOCAL_IMAGE_IP=false
 ENV ALLOW_LOCAL_IMAGE_IP=$ALLOW_LOCAL_IMAGE_IP
 

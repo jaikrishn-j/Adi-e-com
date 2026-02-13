@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   }
 
   const ip = getClientIp(request.headers);
-  if (isRateLimited(`audit:${ip}:${profile.id}`)) {
+  if (await isRateLimited(`audit:${ip}:${profile.id}`)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 

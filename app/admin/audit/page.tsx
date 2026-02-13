@@ -51,13 +51,55 @@ function parseDateInput(value: string | undefined, endOfDay = false) {
   return parsed;
 }
 
+const REDACT_KEY_FRAGMENTS = [
+  "password",
+  "secret",
+  "token",
+  "signature",
+  "authorization",
+  "api_key",
+  "apikey",
+  "access_key",
+];
+
+function sanitizeMetadata(value: unknown, depth = 0): unknown {
+  if (depth > 6) {
+    return "[TRUNCATED]";
+  }
+
+  if (typeof value === "string") {
+    return value.length > 300 ? `${value.slice(0, 300)}…` : value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.slice(0, 30).map((item) => sanitizeMetadata(item, depth + 1));
+  }
+
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>).slice(0, 50);
+    const result: Record<string, unknown> = {};
+
+    for (const [key, entryValue] of entries) {
+      const normalizedKey = key.toLowerCase();
+      const shouldRedact = REDACT_KEY_FRAGMENTS.some((fragment) =>
+        normalizedKey.includes(fragment),
+      );
+      result[key] = shouldRedact ? "[REDACTED]" : sanitizeMetadata(entryValue, depth + 1);
+    }
+
+    return result;
+  }
+
+  return value;
+}
+
 function formatMetadata(metadata: Prisma.JsonValue | null) {
   if (metadata === null) {
     return "";
   }
 
   try {
-    return JSON.stringify(metadata, null, 2);
+    return JSON.stringify(sanitizeMetadata(metadata), null, 2);
   } catch {
     return String(metadata);
   }

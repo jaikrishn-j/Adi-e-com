@@ -5,7 +5,7 @@ import { SignedIn, SignedOut, useClerk, useUser } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { Leaf, LogOut, Menu, ShoppingCart, User, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Header() {
   const { user } = useUser();
@@ -14,18 +14,9 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [cartCount, setCartCount] = useState(0);
-
-  const adminEmails = useMemo(
-    () =>
-      (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? "")
-        .split(",")
-        .map((row) => row.trim().toLowerCase())
-        .filter(Boolean),
-    [],
-  );
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const userEmail = user?.primaryEmailAddress?.emailAddress ?? "";
-  const isAdmin = !!userEmail && adminEmails.includes(userEmail.toLowerCase());
   const userDisplayName = (user?.fullName ?? userEmail.split("@")[0] ?? "User").trim();
   const cartTooltip = cartCount === 0 ? "Cart is empty" : `${cartCount} item${cartCount > 1 ? "s" : ""} in cart`;
 
@@ -83,7 +74,43 @@ export default function Header() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, pathname]);
+  }, [user, pathname]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchRole() {
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
+        if (!res.ok) {
+          if (!cancelled) {
+            setIsAdmin(false);
+          }
+          return;
+        }
+
+        const data = (await res.json()) as { isAdmin?: boolean };
+        if (!cancelled) {
+          setIsAdmin(Boolean(data.isAdmin));
+        }
+      } catch {
+        if (!cancelled) {
+          setIsAdmin(false);
+        }
+      }
+    }
+
+    void fetchRole();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, pathname]);
 
   const handleLogout = async () => {
     await signOut({ redirectUrl: "/login" });

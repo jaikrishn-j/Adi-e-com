@@ -45,6 +45,7 @@ const initialForm: CheckoutForm = {
 
 export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
+  const [razorpayReady, setRazorpayReady] = useState(false);
   const [form, setForm] = useState<CheckoutForm>(initialForm);
 
   const isValid = useMemo(() => {
@@ -67,6 +68,12 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
+      if (typeof window === "undefined" || typeof window.Razorpay !== "function") {
+        alert("Payment UI is still loading. Please wait a second and try again.");
+        setLoading(false);
+        return;
+      }
+
       const createRes = await fetch("/api/checkout/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -100,6 +107,14 @@ export default function CheckoutPage() {
         name: "LeafCart",
         description: "Plant order payment",
         order_id: createData.razorpayOrderId,
+        method: {
+          upi: true,
+          card: true,
+          netbanking: true,
+          wallet: true,
+          emi: true,
+          paylater: true,
+        },
         prefill: createData.prefill,
         handler: async (response: RazorpayResponse) => {
           const verifyRes = await fetch("/api/checkout/verify", {
@@ -135,7 +150,11 @@ export default function CheckoutPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10">
-      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
+      <Script
+        src="https://checkout.razorpay.com/v1/checkout.js"
+        strategy="afterInteractive"
+        onLoad={() => setRazorpayReady(true)}
+      />
       <div className="grid grid-cols-1 gap-8 md:grid-cols-[1.2fr_0.8fr]">
         <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
           <h1 className="text-3xl font-black text-zinc-900">Shipping Details</h1>
@@ -205,10 +224,10 @@ export default function CheckoutPage() {
           <button
             type="button"
             onClick={checkout}
-            disabled={loading || !isValid}
+            disabled={loading || !isValid || !razorpayReady}
             className="mt-6 w-full rounded-xl bg-emerald-700 px-6 py-3 font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {loading ? "Starting payment..." : "Pay with Razorpay"}
+            {loading ? "Starting payment..." : !razorpayReady ? "Loading Razorpay..." : "Pay with Razorpay"}
           </button>
         </aside>
       </div>

@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   }
 
   const ip = getClientIp(request.headers);
-  if (isRateLimited(`admin:products:list:${ip}:${profile.id}`)) {
+  if (await isRateLimited(`admin:products:list:${ip}:${profile.id}`)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   }
 
   const ip = getClientIp(request.headers);
-  if (isRateLimited(`admin:products:create:${ip}:${profile.id}`)) {
+  if (await isRateLimited(`admin:products:create:${ip}:${profile.id}`)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 

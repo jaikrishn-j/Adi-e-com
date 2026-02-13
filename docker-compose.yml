@@ -47,7 +47,7 @@ services:
       /bin/sh -c "
       mc alias set local http://minio:9000 minioadmin minioadmin &&
       mc mb --ignore-existing local/leafcart-media &&
-      mc anonymous set public local/leafcart-media
+      mc anonymous set download local/leafcart-media
       "
 
 volumes:

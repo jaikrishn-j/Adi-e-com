@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   }
 
   const ip = getClientIp(request.headers);
-  if (isRateLimited(`cart:add:${ip}:${profile.id}`)) {
+  if (await isRateLimited(`cart:add:${ip}:${profile.id}`)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
@@ -116,7 +116,7 @@ export async function PATCH(request: Request) {
   }
 
   const ip = getClientIp(request.headers);
-  if (isRateLimited(`cart:update:${ip}:${profile.id}`)) {
+  if (await isRateLimited(`cart:update:${ip}:${profile.id}`)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
@@ -175,7 +175,7 @@ export async function DELETE(request: Request) {
   }
 
   const ip = getClientIp(request.headers);
-  if (isRateLimited(`cart:remove:${ip}:${profile.id}`)) {
+  if (await isRateLimited(`cart:remove:${ip}:${profile.id}`)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 

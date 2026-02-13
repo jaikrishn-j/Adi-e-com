@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 import { AuditAction } from "@prisma/client";
 import { requireAuthProfile } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getClientIp, isRateLimited, isTrustedOrigin, verifyRazorpaySignature } from "@/lib/security";
+import {
+  cleanExternalErrorBody,
+  getClientIp,
+  isRateLimited,
+  isTrustedOrigin,
+  verifyRazorpaySignature,
+} from "@/lib/security";
 import { writeAuditLog } from "@/lib/audit";
 
 export async function POST(request: Request) {
@@ -17,7 +23,7 @@ export async function POST(request: Request) {
   }
 
   const ip = getClientIp(request.headers);
-  if (isRateLimited(`checkout:verify:${ip}:${profile.id}`)) {
+  if (await isRateLimited(`checkout:verify:${ip}:${profile.id}`)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
@@ -99,13 +105,17 @@ export async function POST(request: Request) {
   );
 
   if (!paymentLookupRes.ok) {
-    const errorBody = await paymentLookupRes.text();
+    const providerMessage = cleanExternalErrorBody(await paymentLookupRes.text());
     await writeAuditLog({
       action: AuditAction.PAYMENT_FAILED,
       actorUserId: profile.clerkUserId,
       profileId: profile.id,
       target: order.id,
-      metadata: { reason: "payment_lookup_failed", errorBody },
+      metadata: {
+        reason: "payment_lookup_failed",
+        statusCode: paymentLookupRes.status,
+        providerMessage: providerMessage || undefined,
+      },
       ipAddress: ip,
       userAgent: request.headers.get("user-agent"),
     });

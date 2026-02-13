@@ -23,7 +23,7 @@ export async function PATCH(
   }
 
   const ip = getClientIp(request.headers);
-  if (isRateLimited(`admin:products:update:${ip}:${profile.id}`)) {
+  if (await isRateLimited(`admin:products:update:${ip}:${profile.id}`)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
@@ -177,7 +177,7 @@ export async function DELETE(
   }
 
   const ip = getClientIp(request.headers);
-  if (isRateLimited(`admin:products:delete:${ip}:${profile.id}`)) {
+  if (await isRateLimited(`admin:products:delete:${ip}:${profile.id}`)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 

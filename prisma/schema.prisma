@@ -228,3 +228,13 @@ model AuditLog {
   @@index([actorUserId])
   @@index([createdAt])
 }
+
+model RateLimitEntry {
+  key       String   @id
+  count     Int      @default(1)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([expiresAt])
+}

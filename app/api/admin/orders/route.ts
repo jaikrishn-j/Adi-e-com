@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   }
 
   const ip = getClientIp(request.headers);
-  if (isRateLimited(`admin:orders:list:${ip}:${profile.id}`)) {
+  if (await isRateLimited(`admin:orders:list:${ip}:${profile.id}`)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
