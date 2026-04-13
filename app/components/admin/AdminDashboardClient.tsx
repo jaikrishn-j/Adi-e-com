@@ -177,7 +177,8 @@ function createTrackingDrafts(rows: Order[]) {
 }
 
 function normalizeImageUrl(url: string) {
-  return url.replace("http://minio:9000/", "http://localhost:9000/");
+  // No longer needed since we're using local file storage
+  return url;
 }
 
 const COUNTRY_DIAL_CODES: Record<string, string> = {

@@ -1,11 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { writeFile, mkdir } from "node:fs/promises";
+import { join } from "node:path";
 
-const endpoint = process.env.MINIO_ENDPOINT ?? "http://127.0.0.1:9000";
-const region = process.env.MINIO_REGION ?? "us-east-1";
-const accessKeyId = process.env.MINIO_ACCESS_KEY ?? "minioadmin";
-const secretAccessKey = process.env.MINIO_SECRET_KEY ?? "minioadmin";
-const bucket = process.env.MINIO_BUCKET ?? "leafcart-media";
+/**
+ * Local file storage for product images.
+ * Images are stored in the public/uploads/products directory
+ * and served directly by Next.js static file server.
+ */
+
+const uploadDir = process.env.UPLOAD_DIR ?? "public/uploads/products";
 const allowedMimeTypes = new Set([
   "image/jpeg",
   "image/png",
@@ -61,50 +64,42 @@ function detectImageMime(buffer: Buffer) {
   return null;
 }
 
+/**
+ * Returns the base URL for uploaded images.
+ * In development, uses localhost; in production, uses the app's base URL.
+ */
 function publicBaseUrl() {
-  const value = process.env.MINIO_PUBLIC_URL?.trim();
-  if (value) {
-    try {
-      const parsed = new URL(value);
-      // `minio` is a Docker-internal host and not reachable from browser on host machine.
-      if (process.env.NODE_ENV !== "production" && parsed.hostname === "minio") {
-        parsed.hostname = "localhost";
-      }
-      return parsed.toString().replace(/\/$/, "");
-    } catch {
-      return value.replace(/\/$/, "");
-    }
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (baseUrl) {
+    return baseUrl.replace(/\/$/, "");
   }
 
-  return `${endpoint.replace(/\/$/, "")}/${bucket}`;
+  // Default for local development
+  if (process.env.NODE_ENV !== "production") {
+    return "http://localhost:3000";
+  }
+
+  // Fallback for production - should be set via NEXT_PUBLIC_APP_URL
+  return "";
 }
 
-function client() {
-  return new S3Client({
-    endpoint,
-    region,
-    credentials: {
-      accessKeyId,
-      secretAccessKey,
-    },
-    forcePathStyle: true,
-  });
+/**
+ * Ensures the upload directory exists.
+ */
+async function ensureUploadDir() {
+  const fullPath = join(process.cwd(), uploadDir);
+  try {
+    await mkdir(fullPath, { recursive: true });
+  } catch (error) {
+    const err = error as NodeJS.ErrnoException;
+    if (err.code !== "EEXIST") {
+      throw err;
+    }
+  }
+  return fullPath;
 }
 
 export async function uploadProductImage(file: File) {
-  if (process.env.NODE_ENV === "production") {
-    const required = [
-      process.env.MINIO_ENDPOINT,
-      process.env.MINIO_ACCESS_KEY,
-      process.env.MINIO_SECRET_KEY,
-      process.env.MINIO_BUCKET,
-      process.env.MINIO_PUBLIC_URL,
-    ];
-    if (required.some((value) => !value?.trim())) {
-      throw new Error("Storage is not configured for production");
-    }
-  }
-
   const buffer = Buffer.from(await file.arrayBuffer());
   const detectedMime = detectImageMime(buffer);
 
@@ -128,17 +123,16 @@ export async function uploadProductImage(file: File) {
         return "jpg";
     }
   })();
-  const key = `products/${Date.now()}-${randomUUID()}.${ext}`;
 
-  await client().send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: key,
-      Body: buffer,
-      ContentType: detectedMime,
-      ACL: "public-read",
-    }),
-  );
+  // Generate unique filename with timestamp and UUID
+  const filename = `${Date.now()}-${randomUUID()}.${ext}`;
+  const uploadPath = await ensureUploadDir();
+  const filePath = join(uploadPath, filename);
 
-  return `${publicBaseUrl()}/${key}`;
+  // Write file to disk
+  await writeFile(filePath, buffer);
+
+  // Return the public URL
+  const relativePath = `/uploads/products/${filename}`;
+  return `${publicBaseUrl()}${relativePath}`;
 }
