@@ -132,7 +132,7 @@ export async function uploadProductImage(file: File) {
   // Write file to disk
   await writeFile(filePath, buffer);
 
-  // Return the public URL
-  const relativePath = `/uploads/products/${filename}`;
+  // Return the public URL - derive relative path from uploadDir
+  const relativePath = filePath.replace(process.cwd(), "").replace(/^\/+/, "/");
   return `${publicBaseUrl()}${relativePath}`;
 }
