@@ -1,14 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { writeFile, mkdir } from "node:fs/promises";
-import { join } from "node:path";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
-/**
- * Local file storage for product images.
- * Images are stored in the public/uploads/products directory
- * and served directly by Next.js static file server.
- */
-
-const uploadDir = process.env.UPLOAD_DIR ?? "public/uploads/products";
 const allowedMimeTypes = new Set([
   "image/jpeg",
   "image/png",
@@ -64,39 +56,18 @@ function detectImageMime(buffer: Buffer) {
   return null;
 }
 
-/**
- * Returns the base URL for uploaded images.
- * In development, uses localhost; in production, uses the app's base URL.
- */
-function publicBaseUrl() {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (baseUrl) {
-    return baseUrl.replace(/\/$/, "");
-  }
+const s3 = new S3Client({
+  endpoint: process.env.SUPABASE_S3_ENDPOINT,
+  region: process.env.SUPABASE_S3_REGION,
+  credentials: {
+    accessKeyId: process.env.SUPABASE_S3_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.SUPABASE_S3_ACCESS_KEY_SECRET!,
+  },
+  forcePathStyle: true,
+});
 
-  // Default for local development
-  if (process.env.NODE_ENV !== "production") {
-    return "http://localhost:3000";
-  }
-
-  // Fallback for production - should be set via NEXT_PUBLIC_APP_URL
-  return "";
-}
-
-/**
- * Ensures the upload directory exists.
- */
-async function ensureUploadDir() {
-  const fullPath = join(process.cwd(), uploadDir);
-  try {
-    await mkdir(fullPath, { recursive: true });
-  } catch (error) {
-    const err = error as NodeJS.ErrnoException;
-    if (err.code !== "EEXIST") {
-      throw err;
-    }
-  }
-  return fullPath;
+function getBucket() {
+  return process.env.BUCKET_NAME ?? "product_images";
 }
 
 export async function uploadProductImage(file: File) {
@@ -124,15 +95,19 @@ export async function uploadProductImage(file: File) {
     }
   })();
 
-  // Generate unique filename with timestamp and UUID
   const filename = `${Date.now()}-${randomUUID()}.${ext}`;
-  const uploadPath = await ensureUploadDir();
-  const filePath = join(uploadPath, filename);
+  const key = `products/${filename}`;
+  const bucket = getBucket();
 
-  // Write file to disk
-  await writeFile(filePath, buffer);
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: detectedMime,
+    }),
+  );
 
-  // Return the public URL - derive relative path from uploadDir
-  const relativePath = filePath.replace(process.cwd(), "").replace(/^\/+/, "/");
-  return `${publicBaseUrl()}${relativePath}`;
+  const baseUrl = process.env.SUPABASE_S3_ENDPOINT!.replace("/s3", "/object/public");
+  return `${baseUrl}/${bucket}/${key}`;
 }
