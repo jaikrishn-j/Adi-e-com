@@ -49,11 +49,11 @@ export default function Footer() {
                             </li>
                             <li className="flex items-center gap-3 text-primary-100">
                                 <Phone size={20} className="shrink-0" />
-                                <span>098479 06191</span>
+                                <span>+91 8547606191</span>
                             </li>
                             <li className="flex items-center gap-3 text-primary-100">
                                 <Mail size={20} className="shrink-0" />
-                                <span>hello@keralakissankendra.com</span>
+                                <span>keralakissankendra777@gmail.com</span>
                             </li>
                         </ul>
                     </div>
